@@ -1,7 +1,10 @@
 import RPi.GPIO as GPIO
 import time
+import sys
+import tty
+import termios
 
-# GPIO Pin Konfiguration gemäß deiner Verkabelung
+# GPIO Pin Konfiguration
 IN1 = 17  # Input 1
 IN2 = 22  # Input 2
 IN3 = 23  # Input 3
@@ -15,16 +18,16 @@ GPIO.setup(IN2, GPIO.OUT)
 GPIO.setup(IN3, GPIO.OUT)
 GPIO.setup(IN4, GPIO.OUT)
 
-# Schrittsequenz für 2-spuligen Schrittmotor (4 Schritte - Vollschrittmodus)
-# Jede Zeile aktiviert bestimmte Spulen
-step_sequence = [
-    [1, 0, 0, 1],  # Schritt 1
-    [1, 0, 1, 0],  # Schritt 2
-    [0, 1, 1, 0],  # Schritt 3
-    [0, 1, 0, 1]  # Schritt 4
+# Schrittsequenzen
+# Vollschritt-Sequenz
+full_step_sequence = [
+    [1, 0, 0, 1],
+    [1, 0, 1, 0],
+    [0, 1, 1, 0],
+    [0, 1, 0, 1]
 ]
 
-# Alternative: Halbschrittmodus für sanftere Bewegung (8 Schritte)
+# Halbschritt-Sequenz
 half_step_sequence = [
     [1, 0, 0, 0],
     [1, 0, 1, 0],
@@ -36,6 +39,13 @@ half_step_sequence = [
     [1, 0, 0, 1]
 ]
 
+# Microstep-Sequenz (simuliert mit Halbschritten)
+microstep_sequence = half_step_sequence
+
+# Motorparameter
+STEPS_PER_REV = 200
+current_speed = 5  # U/min (RPM)
+
 
 def set_step(step):
     """Setzt die GPIO Pins entsprechend der Schrittsequenz"""
@@ -45,88 +55,137 @@ def set_step(step):
     GPIO.output(IN4, step[3])
 
 
-def rotate_motor(steps, delay=0.002, clockwise=True, half_step=False):
+def calculate_delay(speed_rpm, step_mode='MICROSTEP'):
     """
-    Dreht den Motor um eine bestimmte Anzahl von Schritten
+    Berechnet die Verzögerung zwischen Schritten basierend auf RPM
+
+    Args:
+        speed_rpm: Geschwindigkeit in Umdrehungen pro Minute
+        step_mode: 'SINGLE', 'DOUBLE', 'MICROSTEP'
+    """
+    if step_mode == 'MICROSTEP':
+        steps = STEPS_PER_REV * 2  # Doppelte Schritte im Halbschrittmodus
+    else:
+        steps = STEPS_PER_REV
+
+    # Verzögerung in Sekunden pro Schritt
+    delay = 60.0 / (speed_rpm * steps)
+    return delay
+
+
+def step_motor(steps, direction='FORWARD', step_mode='MICROSTEP'):
+    """
+    Bewegt den Motor um eine bestimmte Anzahl von Schritten
 
     Args:
         steps: Anzahl der Schritte
-        delay: Verzögerung zwischen Schritten in Sekunden (bestimmt die Geschwindigkeit)
-        clockwise: True für Uhrzeigersinn, False für Gegenuhrzeigersinn
-        half_step: True für Halbschrittmodus, False für Vollschrittmodus
+        direction: 'FORWARD' oder 'BACKWARD'
+        step_mode: 'SINGLE', 'DOUBLE', 'MICROSTEP'
     """
-    sequence = half_step_sequence if half_step else step_sequence
+    # Wähle die richtige Sequenz
+    if step_mode == 'MICROSTEP':
+        sequence = microstep_sequence
+    elif step_mode == 'DOUBLE':
+        sequence = full_step_sequence
+    else:  # SINGLE
+        sequence = full_step_sequence
 
-    for _ in range(steps):
-        for step in (sequence if clockwise else reversed(sequence)):
+    delay = calculate_delay(current_speed, step_mode)
+
+    # Bestimme die Richtung
+    seq = sequence if direction == 'FORWARD' else list(reversed(sequence))
+
+    # Führe die Schritte aus
+    for _ in range(abs(steps)):
+        for step in seq:
             set_step(step)
             time.sleep(delay)
 
 
-def rotate_degrees(degrees, delay=0.002, clockwise=True, half_step=False):
-    """
-    Dreht den Motor um eine bestimmte Gradzahl
-
-    Args:
-        degrees: Gradzahl der Drehung
-        delay: Verzögerung zwischen Schritten
-        clockwise: Drehrichtung
-        half_step: Schrittmodus
-
-    Hinweis: Für typische Schrittmotoren mit 200 Schritten/Umdrehung
-    Bei Halbschritt: 400 Schritte = 360°
-    Bei Vollschritt: 200 Schritte = 360°
-    """
-    steps_per_revolution = 400 if half_step else 200
-    steps = int((degrees / 360.0) * steps_per_revolution)
-    rotate_motor(steps, delay, clockwise, half_step)
-
-
-def stop_motor():
-    """Stoppt den Motor und setzt alle Pins auf LOW"""
+def release_motor():
+    """Gibt alle Spulen frei (Motor stromlos)"""
     GPIO.output(IN1, 0)
     GPIO.output(IN2, 0)
     GPIO.output(IN3, 0)
     GPIO.output(IN4, 0)
 
 
+def get_char():
+    """Liest ein einzelnes Zeichen von der Tastatur"""
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    try:
+        tty.setraw(sys.stdin.fileno())
+        ch = sys.stdin.read(1)
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    return ch
+
+
 def cleanup():
     """Aufräumen der GPIO Pins"""
-    stop_motor()
+    release_motor()
     GPIO.cleanup()
 
 
-# Beispiele für die Verwendung
+# Hauptprogramm
 if __name__ == "__main__":
+    print("=" * 50)
+    print("Stepper Kontrolle bereit!")
+    print("=" * 50)
+    print("Befehle:")
+    print("  f = Vorwärts 200 Schritte")
+    print("  b = Rückwärts 200 Schritte")
+    print("  s = Stop (Motor stromlos)")
+    print("  1 = Geschwindigkeit: 3 RPM")
+    print("  2 = Geschwindigkeit: 5 RPM")
+    print("  3 = Geschwindigkeit: 60 RPM")
+    print("  q = Programm beenden")
+    print("=" * 50)
+    print(f"Aktuelle Geschwindigkeit: {current_speed} RPM")
+    print()
+
     try:
-        print("Schrittmotor Test gestartet...")
+        while True:
+            command = get_char().lower()
 
-        # Beispiel 1: 200 Schritte im Uhrzeigersinn (Vollschritt)
-        print("1. Drehe 200 Schritte im Uhrzeigersinn (Vollschritt)")
-        rotate_motor(200, delay=0.002, clockwise=True, half_step=False)
-        time.sleep(1)
+            if command == 'f':
+                print("→ Vorwärts 200 Schritte")
+                step_motor(200, 'FORWARD', 'MICROSTEP')
+                print("  Fertig!")
 
-        # Beispiel 2: 200 Schritte gegen den Uhrzeigersinn (Vollschritt)
-        print("2. Drehe 200 Schritte gegen den Uhrzeigersinn (Vollschritt)")
-        rotate_motor(200, delay=0.002, clockwise=False, half_step=False)
-        time.sleep(1)
+            elif command == 'b':
+                print("← Rückwärts 200 Schritte")
+                step_motor(200, 'BACKWARD', 'MICROSTEP')
+                print("  Fertig!")
 
-        # Beispiel 3: 180 Grad Drehung (Halbschritt)
-        print("3. Drehe 180 Grad (Halbschritt)")
-        rotate_degrees(180, delay=0.001, clockwise=True, half_step=True)
-        time.sleep(1)
+            elif command == 's':
+                print("⏸ Motor Stop")
+                release_motor()
 
-        # Beispiel 4: Kontinuierliche Drehung
-        print("4. Kontinuierliche Drehung für 5 Sekunden")
-        start_time = time.time()
-        while time.time() - start_time < 5:
-            rotate_motor(10, delay=0.001, clockwise=True, half_step=True)
+            elif command == '1':
+                current_speed = 3
+                print(f"⚙ Geschwindigkeit: {current_speed} RPM")
 
-        print("Test abgeschlossen!")
+            elif command == '2':
+                current_speed = 5
+                print(f"⚙ Geschwindigkeit: {current_speed} RPM")
+
+            elif command == '3':
+                current_speed = 60
+                print(f"⚙ Geschwindigkeit: {current_speed} RPM")
+
+            elif command == 'q':
+                print("\n👋 Programm wird beendet...")
+                break
+
+            elif command == '\x03':  # Ctrl+C
+                break
 
     except KeyboardInterrupt:
-        print("\nProgramm durch Benutzer abgebrochen")
+        print("\n\n⚠ Programm durch Benutzer abgebrochen")
 
     finally:
         cleanup()
-        print("GPIO Pins aufgeräumt")
+        print("✓ GPIO Pins aufgeräumt")
+        print("Auf Wiedersehen!")
