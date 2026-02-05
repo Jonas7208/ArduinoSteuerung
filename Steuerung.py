@@ -1,34 +1,40 @@
 import RPi.GPIO as GPIO
 import time
-import sys
-import tty
-import termios
 
-# GPIO Pin Konfiguration
-IN1 = 17  # Input 1
-IN2 = 22  # Input 2
-IN3 = 23  # Input 3
-IN4 = 24  # Input 4
 
-# GPIO Setup
+motor1_in1 = 10
+motor1_in2 = 9
+motor1_in3 = 25
+motor1_in4 = 11
+
+motor2_in1 = 17
+motor2_in2 = 22
+motor2_in3 = 23
+motor2_in4 = 24
+
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
-GPIO.setup(IN1, GPIO.OUT)
-GPIO.setup(IN2, GPIO.OUT)
-GPIO.setup(IN3, GPIO.OUT)
-GPIO.setup(IN4, GPIO.OUT)
 
-# Schrittsequenzen
-# Vollschritt-Sequenz
-full_step_sequence = [
+GPIO.setup(motor1_in1, GPIO.OUT)
+GPIO.setup(motor1_in2, GPIO.OUT)
+GPIO.setup(motor1_in3, GPIO.OUT)
+GPIO.setup(motor1_in4, GPIO.OUT)
+
+GPIO.setup(motor2_in1, GPIO.OUT)
+GPIO.setup(motor2_in2, GPIO.OUT)
+GPIO.setup(motor2_in3, GPIO.OUT)
+GPIO.setup(motor2_in4, GPIO.OUT)
+
+
+ganz_schritt = [
     [1, 0, 0, 1],
     [1, 0, 1, 0],
     [0, 1, 1, 0],
     [0, 1, 0, 1]
 ]
 
-# Halbschritt-Sequenz
-half_step_sequence = [
+
+halb_schritt = [
     [1, 0, 0, 0],
     [1, 0, 1, 0],
     [0, 0, 1, 0],
@@ -39,153 +45,104 @@ half_step_sequence = [
     [1, 0, 0, 1]
 ]
 
-# Microstep-Sequenz (simuliert mit Halbschritten)
-microstep_sequence = half_step_sequence
 
-# Motorparameter
-STEPS_PER_REV = 200
-current_speed = 5  # U/min (RPM)
+class StepperMotor:
+
+    def __init__(self, in1, in2, in3, in4, name="Motor"):
+        self.in1 = in1
+        self.in2 = in2
+        self.in3 = in3
+        self.in4 = in4
+        self.name = name
+
+    def set_step(self, step):
+        GPIO.output(self.in1, step[0])
+        GPIO.output(self.in2, step[1])
+        GPIO.output(self.in3, step[2])
+        GPIO.output(self.in4, step[3])
+
+    def rotate(self, steps, delay=0.002, clockwise=True, half_step=False):
+        sequence = halb_schritt if half_step else ganz_schritt
+
+        for i in range(steps):
+            for step in (sequence if clockwise else reversed(sequence)):
+                self.set_step(step)
+                time.sleep(delay)
+
+    def rotate_degrees(self, degrees, delay=0.002, clockwise=True, half_step=False):
+
+        steps_per_revolution = 400 if half_step else 200
+        steps = int((degrees / 360.0) * steps_per_revolution)
+        self.rotate(steps, delay, clockwise, half_step)
+
+    def stop(self):
+        GPIO.output(self.in1, 0)
+        GPIO.output(self.in2, 0)
+        GPIO.output(self.in3, 0)
+        GPIO.output(self.in4, 0)
 
 
-def set_step(step):
-    """Setzt die GPIO Pins entsprechend der Schrittsequenz"""
-    GPIO.output(IN1, step[0])
-    GPIO.output(IN2, step[1])
-    GPIO.output(IN3, step[2])
-    GPIO.output(IN4, step[3])
+def rotate_both_motors(motor1, motor2, steps, delay=0.002,
+                       m1_clockwise=True, m2_clockwise=True, half_step=False):
 
+    sequence = halb_schritt if half_step else ganz_schritt
 
-def calculate_delay(speed_rpm, step_mode='MICROSTEP'):
-    """
-    Berechnet die Verzögerung zwischen Schritten basierend auf RPM
+    for j in range(steps):
+        for i in range(len(sequence)):
+            step1 = sequence[i] if m1_clockwise else sequence[-(i + 1)]
+            step2 = sequence[i] if m2_clockwise else sequence[-(i + 1)]
 
-    Args:
-        speed_rpm: Geschwindigkeit in Umdrehungen pro Minute
-        step_mode: 'SINGLE', 'DOUBLE', 'MICROSTEP'
-    """
-    if step_mode == 'MICROSTEP':
-        steps = STEPS_PER_REV * 2  # Doppelte Schritte im Halbschrittmodus
-    else:
-        steps = STEPS_PER_REV
-
-    # Verzögerung in Sekunden pro Schritt
-    delay = 60.0 / (speed_rpm * steps)
-    return delay
-
-
-def step_motor(steps, direction='FORWARD', step_mode='MICROSTEP'):
-    """
-    Bewegt den Motor um eine bestimmte Anzahl von Schritten
-
-    Args:
-        steps: Anzahl der Schritte
-        direction: 'FORWARD' oder 'BACKWARD'
-        step_mode: 'SINGLE', 'DOUBLE', 'MICROSTEP'
-    """
-    # Wähle die richtige Sequenz
-    if step_mode == 'MICROSTEP':
-        sequence = microstep_sequence
-    elif step_mode == 'DOUBLE':
-        sequence = full_step_sequence
-    else:  # SINGLE
-        sequence = full_step_sequence
-
-    delay = calculate_delay(current_speed, step_mode)
-
-    # Bestimme die Richtung
-    seq = sequence if direction == 'FORWARD' else list(reversed(sequence))
-
-    # Führe die Schritte aus
-    for _ in range(abs(steps)):
-        for step in seq:
-            set_step(step)
+            motor1.set_step(step1)
+            motor2.set_step(step2)
             time.sleep(delay)
 
 
-def release_motor():
-    """Gibt alle Spulen frei (Motor stromlos)"""
-    GPIO.output(IN1, 0)
-    GPIO.output(IN2, 0)
-    GPIO.output(IN3, 0)
-    GPIO.output(IN4, 0)
-
-
-def get_char():
-    """Liest ein einzelnes Zeichen von der Tastatur"""
-    fd = sys.stdin.fileno()
-    old_settings = termios.tcgetattr(fd)
-    try:
-        tty.setraw(sys.stdin.fileno())
-        ch = sys.stdin.read(1)
-    finally:
-        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-    return ch
-
-
 def cleanup():
-    """Aufräumen der GPIO Pins"""
-    release_motor()
     GPIO.cleanup()
 
 
-# Hauptprogramm
+motor1 = StepperMotor(motor1_in1, motor1_in2, motor1_in3, motor1_in4, "Motor 1")
+motor2 = StepperMotor(motor2_in1, motor2_in2, motor2_in3, motor2_in4, "Motor 2")
+
+
 if __name__ == "__main__":
-    print("=" * 50)
-    print("Stepper Kontrolle bereit!")
-    print("=" * 50)
-    print("Befehle:")
-    print("  f = Vorwärts 200 Schritte")
-    print("  b = Rückwärts 200 Schritte")
-    print("  s = Stop (Motor stromlos)")
-    print("  1 = Geschwindigkeit: 3 RPM")
-    print("  2 = Geschwindigkeit: 5 RPM")
-    print("  3 = Geschwindigkeit: 60 RPM")
-    print("  q = Programm beenden")
-    print("=" * 50)
-    print(f"Aktuelle Geschwindigkeit: {current_speed} RPM")
-    print()
-
     try:
-        while True:
-            command = get_char().lower()
 
-            if command == 'f':
-                print("→ Vorwärts 200 Schritte")
-                step_motor(200, 'FORWARD', 'MICROSTEP')
-                print("  Fertig!")
+        print("Test1")
+        rotate_both_motors(motor1, motor2, 200, delay=0.002,
+                           m1_clockwise=True, m2_clockwise=True)
+        time.sleep(1)
 
-            elif command == 'b':
-                print("← Rückwärts 200 Schritte")
-                step_motor(200, 'BACKWARD', 'MICROSTEP')
-                print("  Fertig!")
+        print("Test2")
+        rotate_both_motors(motor1, motor2, 200, delay=0.002,
+                           m1_clockwise=True, m2_clockwise=False)
+        time.sleep(1)
 
-            elif command == 's':
-                print("⏸ Motor Stop")
-                release_motor()
+        print("Motor 1 90 Grad")
+        motor1.rotate_degrees(90, delay=0.002, clockwise=True)
+        time.sleep(1)
 
-            elif command == '1':
-                current_speed = 3
-                print(f"⚙ Geschwindigkeit: {current_speed} RPM")
+        print("Motor 2 90 Grad")
+        motor2.rotate_degrees(90, delay=0.002, clockwise=True)
+        time.sleep(1)
 
-            elif command == '2':
-                current_speed = 5
-                print(f"⚙ Geschwindigkeit: {current_speed} RPM")
 
-            elif command == '3':
-                current_speed = 60
-                print(f"⚙ Geschwindigkeit: {current_speed} RPM")
+        print("Erst 1 dann 2")
+        motor1.rotate_degrees(180, delay=0.002, clockwise=True, half_step=True)
+        motor2.rotate_degrees(180, delay=0.002, clockwise=True, half_step=True)
+        time.sleep(1)
 
-            elif command == 'q':
-                print("\n👋 Programm wird beendet...")
-                break
+        print("Beide lange")
+        start_time = time.time()
+        while time.time() - start_time < 5:
+            rotate_both_motors(motor1, motor2, 10, delay=0.001,
+                               m1_clockwise=True, m2_clockwise=True, half_step=True)
 
-            elif command == '\x03':  # Ctrl+C
-                break
 
     except KeyboardInterrupt:
-        print("\n\n⚠ Programm durch Benutzer abgebrochen")
+        print("\n\nAbbruch")
 
     finally:
+        motor1.stop()
+        motor2.stop()
         cleanup()
-        print("✓ GPIO Pins aufgeräumt")
-        print("Auf Wiedersehen!")
