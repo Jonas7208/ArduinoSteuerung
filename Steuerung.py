@@ -108,18 +108,18 @@ motor2 = StepperMotor(motor2_in1, motor2_in2, motor2_in3, motor2_in4, "Motor 2")
 if __name__ == "__main__":
     try:
         print("Position 1")
-        motor1.rotate_degrees(90, delay=0.002, clockwise=True, half_step=True)
+        motor1.rotate_degrees(90, delay=0.005, clockwise=True, half_step=False)
         time.sleep(2)
-        motor2.rotate_degrees(360, delay=0.002, clockwise=True, half_step=True)
-        motor1.rotate_degrees(90, delay=0.002, clockwise=False, half_step=True)
+        motor2.rotate_degrees(360, delay=0.005, clockwise=True, half_step=False)
+        motor1.rotate_degrees(90, delay=0.002, clockwise=False, half_step=False)
         time.sleep(5)
 
 
 
         print("Position 2")
-        motor1.rotate_degrees(90, delay=0.002, clockwise=True, half_step=True)
+        motor1.rotate_degrees(90, delay=0.002, clockwise=True, half_step=False)
         time.sleep(2)
-        motor2.rotate_degrees(360, delay=0.002, clockwise=True, half_step=True)
+        motor2.rotate_degrees(360, delay=0.002, clockwise=True, half_step=False)
         time.sleep(5)
 
         print("Test2")
