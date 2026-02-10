@@ -36,7 +36,6 @@ ganz_schritt = [
 
 halb_schritt = [
     [1, 0, 0, 0],
-    [1, 0, 1, 0],
     [0, 0, 1, 0],
     [0, 1, 1, 0],
     [0, 1, 0, 0],
@@ -107,11 +106,20 @@ motor2 = StepperMotor(motor2_in1, motor2_in2, motor2_in3, motor2_in4, "Motor 2")
 
 if __name__ == "__main__":
     try:
+        print("Position 1")
+        motor1.rotate_degrees(90, delay=0.002, clockwise=True, half_step=True)
+        time.sleep(2)
+        motor2.rotate_degrees(360, delay=0.002, clockwise=True, half_step=True)
+        motor1.rotate_degrees(90, delay=0.002, clockwise=False, half_step=True)
+        time.sleep(5)
 
-        print("Test1")
-        rotate_both_motors(motor1, motor2, 200, delay=0.002,
-                           m1_clockwise=True, m2_clockwise=True)
-        time.sleep(1)
+
+
+        print("Position 2")
+        motor1.rotate_degrees(90, delay=0.002, clockwise=True, half_step=True)
+        time.sleep(2)
+        motor2.rotate_degrees(360, delay=0.002, clockwise=True, half_step=True)
+        time.sleep(5)
 
         print("Test2")
         rotate_both_motors(motor1, motor2, 200, delay=0.002,
