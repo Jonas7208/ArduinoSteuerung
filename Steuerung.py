@@ -117,15 +117,15 @@ if __name__ == "__main__":
     try:
         # Einfacher Test
         print("Vorwärts 90 Grad")
-        motor1.rotate_degrees(90, delay=0.003, clockwise=True, half_step=False)
+        motor2.rotate_degrees(90, delay=0.003, clockwise=True, half_step=False)
         time.sleep(1)
 
         print("Rückwärts 90 Grad")
-        motor1.rotate_degrees(90, delay=0.003, clockwise=False, half_step=False)
+        motor2.rotate_degrees(90, delay=0.003, clockwise=False, half_step=False)
         time.sleep(1)
 
         print("Test Half-Step")
-        motor1.rotate_degrees(90, delay=0.003, clockwise=True, half_step=True)
+        motor2.rotate_degrees(90, delay=0.003, clockwise=True, half_step=True)
         time.sleep(1)
 
     except KeyboardInterrupt:
