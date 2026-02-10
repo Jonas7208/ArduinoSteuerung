@@ -63,8 +63,11 @@ class StepperMotor:
     def rotate(self, steps, delay=0.002, clockwise=True, half_step=False):
         sequence = halb_schritt if half_step else ganz_schritt
 
+        if not clockwise:
+            sequence = list(reversed(sequence))
+
         for i in range(steps):
-            for step in (sequence if clockwise else reversed(sequence)):
+            for step in sequence:
                 self.set_step(step)
                 time.sleep(delay)
 
@@ -85,16 +88,14 @@ def rotate_both_motors(motor1, motor2, steps, delay=0.002,
                        m1_clockwise=True, m2_clockwise=True, half_step=False):
 
     sequence = halb_schritt if half_step else ganz_schritt
+    seq1 = sequence if m1_clockwise else list(reversed(sequence))
+    seq2 = sequence if m2_clockwise else list(reversed(sequence))
 
     for j in range(steps):
         for i in range(len(sequence)):
-            step1 = sequence[i] if m1_clockwise else sequence[-(i + 1)]
-            step2 = sequence[i] if m2_clockwise else sequence[-(i + 1)]
-
-            motor1.set_step(step1)
-            motor2.set_step(step2)
+            motor1.set_step(seq1[i])
+            motor2.set_step(seq2[i])
             time.sleep(delay)
-
 
 def cleanup():
     GPIO.cleanup()
