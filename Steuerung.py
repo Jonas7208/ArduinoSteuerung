@@ -36,23 +36,22 @@ GPIO.setup(motor2_in4, GPIO.OUT)
 # GPIO.output(motor1_enb, GPIO.HIGH)
 
 
-# KORRIGIERTE Sequenzen für bipolaren Stepper mit L298N
+# DEINE Original-Sequenzen (die vorher funktionierten)
 ganz_schritt = [
+    [1, 0, 0, 1],
     [1, 0, 1, 0],
     [0, 1, 1, 0],
-    [0, 1, 0, 1],
-    [1, 0, 0, 1]
+    [0, 1, 0, 1]
 ]
 
 halb_schritt = [
-    [1, 0, 1, 0],
     [1, 0, 0, 0],
-    [0, 1, 1, 0],
     [0, 0, 1, 0],
-    [0, 1, 0, 1],
+    [0, 1, 1, 0],
     [0, 1, 0, 0],
-    [1, 0, 0, 1],
-    [0, 0, 0, 1]
+    [0, 1, 0, 1],
+    [0, 0, 0, 1],
+    [1, 0, 0, 1]
 ]
 
 
@@ -73,6 +72,7 @@ class StepperMotor:
 
     def rotate(self, steps, delay=0.002, clockwise=True, half_step=False):
         sequence = halb_schritt if half_step else ganz_schritt
+        # NUR DIESE ZEILE ÄNDERN:
         step_sequence = sequence if clockwise else sequence[::-1]
 
         for i in range(steps):
@@ -81,7 +81,7 @@ class StepperMotor:
                 time.sleep(delay)
 
     def rotate_degrees(self, degrees, delay=0.002, clockwise=True, half_step=False):
-        # Für typischen bipolaren Stepper (z.B. NEMA17: 200 steps/rev)
+        # Deine original steps_per_revolution
         steps_per_revolution = 400 if half_step else 200
         steps = int((degrees / 360.0) * steps_per_revolution)
         self.rotate(steps, delay, clockwise, half_step)
@@ -96,6 +96,7 @@ class StepperMotor:
 def rotate_both_motors(motor1, motor2, steps, delay=0.002,
                        m1_clockwise=True, m2_clockwise=True, half_step=False):
     sequence = halb_schritt if half_step else ganz_schritt
+    # NUR DIESE ZEILEN ÄNDERN:
     seq1 = sequence if m1_clockwise else sequence[::-1]
     seq2 = sequence if m2_clockwise else sequence[::-1]
 
