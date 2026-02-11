@@ -232,14 +232,19 @@ if __name__ == "__main__":
                 print("🔒 Position gehalten")
 
             elif cmd == '1':
+                motor1.rotate_degrees(90, delay)
+
+
+            elif cmd == '5':
                 delay = 0.010
                 print(f"⚙ Langsam (delay={delay}s)")
-            elif cmd == '2':
+            elif cmd == '6':
                 delay = 0.005
                 print(f"⚙ Mittel (delay={delay}s)")
-            elif cmd == '3':
+            elif cmd == '7':
                 delay = 0.003
                 print(f"⚙ Schnell (delay={delay}s)")
+
 
             elif cmd in ('q', '\x03'):
                 print("\n👋 Beende...")
