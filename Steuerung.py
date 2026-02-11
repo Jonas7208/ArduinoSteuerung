@@ -233,6 +233,7 @@ if __name__ == "__main__":
 
             elif cmd == '1':
                 motor1.rotate_degrees(90, delay)
+                motor1.stop()
 
 
             elif cmd == '5':
