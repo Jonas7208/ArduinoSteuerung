@@ -181,6 +181,7 @@ if __name__ == "__main__":
                 pos = int(cmd)
                 move_motors_simultaneously(motors, "move_to_position", pos, delay)
                 time.sleep(1)
+                motor1.rotate_steps(200,0.005,True)
                 move_motors_simultaneously(motors, "move_to_home", delay)
 
             elif cmd == "h":
