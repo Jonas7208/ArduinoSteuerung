@@ -232,8 +232,12 @@ if __name__ == "__main__":
                 print("🔒 Position gehalten")
 
             elif cmd == '1':
-                motor1.rotate_degrees(90, delay)
-                motor1.stop()
+                rotate_both(motor1, motor2, 50, delay, True, True)
+                time.sleep(2)
+                motor1.rotate(200, 0.05, True)
+                time.sleep(2)
+                rotate_both(motor1, motor2, 150, delay, True, True)
+                motor1.rotate(200, 0.05, False)
 
 
             elif cmd == '5':
