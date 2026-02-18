@@ -152,20 +152,27 @@ def get_char():
         termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
 def Kamera_erkennung():
+    print("📸 Starte Kamera und Erkennung...")
+
     result = subprocess.run(
         [sys.executable, Kamera_Script],
         capture_output=True,
         text=True
     )
 
+    print(f"Kamera-Ausgabe:\n{result.stdout}")
+
     if result.returncode != 0:
-        print(f"Fehler:\n{result.stderr}")
+        print(f"❌ Fehler bei Kamera/CNN:\n{result.stderr}")
         return None
 
     for line in result.stdout.splitlines():
         if line.startswith("Kategorie:"):
-            return line.split(":", 1)[1].strip().lower()
+            kategorie = line.split(":", 1)[1].strip().lower()
+            print(f"✅ Kategorie erkannt: {kategorie}")
+            return kategorie
 
+    print("⚠️ Keine Kategorie in der Ausgabe gefunden.")
     return None
 
 
@@ -187,11 +194,18 @@ if __name__ == "__main__":
                 kategorie = Kamera_erkennung()
                 if kategorie:
                     position = Kategorie_zu_Positonen.get(kategorie, 0)
+                    print(f"🔄 '{kategorie}' → Position {position}")
                     move_motors_simultaneously(motors, "move_to_position", position, delay)
+                    print("⏳ Warte 1 Sekunde...")
                     time.sleep(1)
+                    print("🔧 Auswurf...")
                     motor1.rotate_steps(200, 0.005, True)
                     time.sleep(1)
+                    print("🏠 Fahre zurück zur Home-Position...")
                     move_motors_simultaneously(motors, "move_to_home", delay)
+                    print("✅ Fertig!")
+                else:
+                    print("❌ Keine Kategorie erkannt, Motor bleibt stehen.")
 
             elif cmd in "01234":
                 pos = int(cmd)
