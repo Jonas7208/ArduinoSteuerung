@@ -4,7 +4,9 @@ import sys
 import tty
 import termios
 import threading
+import subprocess
 
+Kamera_Script = "/home/jugendforscht26/RasberryPi2/Kamera.py"
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 
@@ -35,6 +37,14 @@ POSITIONS = {
     2: 180,
     3: 270,
     4: 360,
+}
+Kategorie_zu_Positonen = {
+    "cardboard": 1,
+    "paper":1,
+    "plastic": 2,
+    "metal": 2,
+    "glass": 3,
+    "trash": 4,
 }
 
 SEQUENCES = {
@@ -114,10 +124,6 @@ class StepperMotor:
         self.current_position = 0.0
 
 
-# ---------------------------------------------------------------------------
-#  Gleichzeitige Steuerung (Threading)
-# ---------------------------------------------------------------------------
-
 def move_motors_simultaneously(motors, action, *args, **kwargs):
     threads = []
     for motor in motors:
@@ -135,9 +141,6 @@ def move_motors_simultaneously(motors, action, *args, **kwargs):
         motor.stop()
 
 
-# ---------------------------------------------------------------------------
-#  Hilfsfunktion: Tastatureingabe
-# ---------------------------------------------------------------------------
 
 def get_char():
     fd = sys.stdin.fileno()
@@ -148,10 +151,23 @@ def get_char():
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
+def Kamera_erkennung():
+    result = subprocess.run(
+        [sys.executable, Kamera_Script],
+        capture_output=True,
+        text=True
+    )
 
-# ---------------------------------------------------------------------------
-#  Hauptprogramm
-# ---------------------------------------------------------------------------
+    if result.returncode != 0:
+        print(f"Fehler:\n{result.stderr}")
+        return None
+
+    for line in result.stdout.splitlines():
+        if line.startswith("Kategorie:"):
+            return line.split(":", 1)[1].strip().lower()
+
+    return None
+
 
 if __name__ == "__main__":
     motor1 = StepperMotor(MOTOR1_PINS, "Motor 1", steps_per_rev=200)
@@ -160,28 +176,28 @@ if __name__ == "__main__":
 
     delay = 0.005
 
-    print("╔═══════════════════════════════════════╗")
-    print("║       Stepper-Motor Steuerung         ║")
-    print("║     (Beide Motoren gleichzeitig)      ║")
-    print("╠═══════════════════════════════════════╣")
-    print("║  0-4  Position anfahren + Home        ║")
-    print("║  h    Home-Position                   ║")
-    print("║  r    Kalibrierung (Position = 0°)    ║")
-    print("║  s    Stop (stromlos)                 ║")
-    print("║  p    Positionen anzeigen             ║")
-    print("║  +/-  Geschwindigkeit ändern          ║")
-    print("║  q    Beenden                         ║")
-    print("╚═══════════════════════════════════════╝\n")
+    print("k=Kamera,"
+          "0-4=Positionen,"
+          "h=Home,")
 
     try:
         while True:
             cmd = get_char().lower()
+            if cmd == "k":
+                kategorie = Kamera_erkennung()
+                if kategorie:
+                    position = Kategorie_zu_Positonen.get(kategorie, 0)
+                    move_motors_simultaneously(motors, "move_to_position", position, delay)
+                    time.sleep(1)
+                    motor1.rotate_steps(200, 0.005, True)
+                    time.sleep(1)
+                    move_motors_simultaneously(motors, "move_to_home", delay)
 
-            if cmd in "01234":
+            elif cmd in "01234":
                 pos = int(cmd)
                 move_motors_simultaneously(motors, "move_to_position", pos, delay)
                 time.sleep(1)
-                motor1.rotate_steps(200,0.005,True)
+                motor1.rotate_steps(200, 0.005, True)
                 time.sleep(1)
                 move_motors_simultaneously(motors, "move_to_home", delay)
 
@@ -215,4 +231,4 @@ if __name__ == "__main__":
     finally:
         for m in motors:
             m.stop()
-        GPIO.cleanup()
+    GPIO.cleanup()
