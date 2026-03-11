@@ -232,6 +232,12 @@ public class BMIRechner extends JFrame {
             + "Hast du das verstanden?",
               JOptionPane.WARNING_MESSAGE);
 
+        // Captcha: Menschlichkeitsprüfung vor der Bestätigung
+        if (!askMathCaptcha("die Nutzungsbedingungen zu bestätigen")) {
+            showWelcomePopups(); // nochmal von vorne 😈
+            return;
+        }
+
         // Pop-up 4: Bestätigung des Hinweises
         int confirm = JOptionPane.showConfirmDialog(this,
               "Wirklich verstanden?\n\nHast du den Hinweis sorgfältig gelesen?",
@@ -251,6 +257,18 @@ public class BMIRechner extends JFrame {
             + "Bitte gib alle Felder wahrheitsgemäß an.\n"
             + "Das Programm überprüft deine Eingaben! 🔍",
               JOptionPane.INFORMATION_MESSAGE);
+
+        // Unnötiger Ladebalken: Systeminitialisierung
+        showFakeLoader("⚙️ System wird initialisiert...", new String[]{
+            "Verbinde mit BMI-Servern...",
+            "Lade Körperdaten-Datenbank (247 MB)...",
+            "Kalibriere digitale Gewichtssensoren...",
+            "Initialisiere Quanten-BMI-Algorithmus...",
+            "Überprüfe Systemintegrität...",
+            "Installiere Updates (Schritt 1 von 1)...",
+            "Starte neuronales Netz...",
+            "System bereit! \u2705"
+        });
     }
 
     // ════════════════════════════════════════════════════════════════════════
@@ -270,6 +288,15 @@ public class BMIRechner extends JFrame {
                   JOptionPane.INFORMATION_MESSAGE);
             return;
         }
+
+        // Unnötiger Ladebalken: Eingaben laden
+        showFakeLoader("📥 Eingaben werden geladen...", new String[]{
+            "Formular wird gelesen...",
+            "Zeichen werden dekodiert...",
+            "Tippfehler werden gesucht...",
+            "Sonderzeichen werden escaped...",
+            "Eingaben zwischengespeichert \u2705"
+        });
 
         // Eingaben lesen
         String name   = getFieldText(nameField,   "z. B.  Max Mustermann");
@@ -391,6 +418,15 @@ public class BMIRechner extends JFrame {
             return;
         }
 
+        // Unnötiger Ladebalken: Daten überprüfen
+        showFakeLoader("🔍 Daten werden überprüft...", new String[]{
+            "Plausibilitätscheck läuft...",
+            "Daten werden mit Weltgesundheitsorganisation abgeglichen...",
+            "Anomalie-Detektor wird kalibriert...",
+            "Körpermaße werden normiert...",
+            "Anthropometrische Daten bestätigt \u2705"
+        });
+
         // Pop-up: Eingaben bestätigen
         int confirmData = JOptionPane.showConfirmDialog(this,
               "Bitte bestätige deine Eingaben:\n\n"
@@ -409,11 +445,22 @@ public class BMIRechner extends JFrame {
             return;
         }
 
+        // Captcha: Menschlichkeitsprüfung vor der Berechnung
+        if (!askMathCaptcha("die BMI-Berechnung zu starten")) {
+            return;
+        }
+
         // ── Berechnung ───────────────────────────────────────────────────────
-        popup("⏳ Berechnung läuft...",
-              "Dein BMI wird jetzt berechnet.\n\n"
-            + "Dies kann bis zu 0,000001 Sekunden dauern.\nBitte warte! ⌛",
-              JOptionPane.INFORMATION_MESSAGE);
+        // Unnötiger Ladebalken: BMI berechnen
+        showFakeLoader("🔬 BMI wird berechnet...", new String[]{
+            "Schwerkraft wird gemessen...",
+            "Körpermasse-Index-Formel wird geladen...",
+            "Größe² wird berechnet (Schritt 1 von 1)...",
+            "Quanten-Gewichts-Division läuft...",
+            "Ergebnis wird auf 1 Dezimalstelle gerundet...",
+            "Kategorie wird aus Datenbank abgerufen...",
+            "Berechnung abgeschlossen \u2705"
+        });
 
         double heightM = heightCm / 100.0;
         double bmi     = weight / (heightM * heightM);
@@ -462,6 +509,16 @@ public class BMIRechner extends JFrame {
         int barVal = (int) Math.min(bmi * 10, 400);
         bmiBar.setValue(barVal);
         bmiBar.setForeground(catColor);
+
+        // Unnötiger Ladebalken: Ergebnis aufbereiten
+        showFakeLoader("📊 Ergebnis wird aufbereitet...", new String[]{
+            "BMI-Wert wird formatiert...",
+            "Kategorie wird ermittelt...",
+            "Persönliche Tipps werden generiert...",
+            "Infografik wird erstellt...",
+            "Ergebnis wird verschlüsselt...",
+            "Ergebnis bereit \u2705"
+        });
 
         // Pop-up: Ergebnis
         popup("🎯 Dein BMI-Ergebnis",
@@ -575,6 +632,155 @@ public class BMIRechner extends JFrame {
               JOptionPane.INFORMATION_MESSAGE);
     }
 
+    // ════════════════════════════════════════════════════════════════════════
+    //   FAKE LADEBALKEN
+    // ════════════════════════════════════════════════════════════════════════
+    /**
+     * Zeigt einen modalen Dialog mit einem animierten (aber völlig unnötigen)
+     * Fortschrittsbalken, der die übergebenen Schritt-Texte nacheinander anzeigt.
+     * Der Dialog schließt sich nach Ablauf automatisch.
+     */
+    private void showFakeLoader(String title, String[] steps) {
+        JDialog dlg = new JDialog(this, title, true);
+        dlg.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+        dlg.setSize(440, 175);
+        dlg.setLocationRelativeTo(this);
+        dlg.setResizable(false);
+
+        JPanel panel = new JPanel(new BorderLayout(0, 14));
+        panel.setBackground(BG_CARD);
+        panel.setBorder(new CompoundBorder(
+                new LineBorder(ACCENT2, 1),
+                new EmptyBorder(22, 26, 22, 26)));
+
+        JLabel statusLbl = new JLabel("\u2699\uFE0F  " + steps[0], SwingConstants.LEFT);
+        statusLbl.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        statusLbl.setForeground(TEXT_LIGHT);
+
+        JProgressBar bar = new JProgressBar(0, 100);
+        bar.setValue(0);
+        bar.setStringPainted(true);
+        bar.setFont(new Font("SansSerif", Font.BOLD, 11));
+        bar.setForeground(ACCENT2);
+        bar.setBackground(BG_DARK);
+        bar.setPreferredSize(new Dimension(0, 22));
+
+        panel.add(statusLbl, BorderLayout.CENTER);
+        panel.add(bar,       BorderLayout.SOUTH);
+        dlg.setContentPane(panel);
+
+        // Each step takes ~ticksPerStep x 40 ms = 720 ms
+        int ticksPerStep = 18;
+        int[] tick = {0};
+        int totalTicks = steps.length * ticksPerStep;
+
+        // javax.swing.Timer fires on the EDT; the modal dialog runs its own
+        // nested event loop, so Timer events are still dispatched correctly.
+        Timer timer = new Timer(40, null);
+        timer.addActionListener(e -> {
+            tick[0]++;
+            int stepIdx = Math.min(tick[0] / ticksPerStep, steps.length - 1);
+            statusLbl.setText("\u2699\uFE0F  " + steps[stepIdx]);
+            int pct = Math.min(tick[0] * 100 / totalTicks, 100);
+            bar.setValue(pct);
+            bar.setString(pct + "%");
+            if (tick[0] >= totalTicks) {
+                timer.stop();
+                dlg.dispose();
+            }
+        });
+
+        timer.start();
+        dlg.setVisible(true); // blocks in the modal event loop; timer still fires
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    //   RECHENAUFGABE (CAPTCHA)
+    // ════════════════════════════════════════════════════════════════════════
+    /**
+     * Legt dem Nutzer eine zufällige Rechenaufgabe vor.
+     * Gibt {@code true} zurück, wenn die Aufgabe korrekt gelöst wurde,
+     * {@code false} wenn alle Versuche aufgebraucht sind oder der Dialog
+     * abgebrochen wurde.
+     *
+     * @param purpose wird im Text angezeigt, z. B. "die Berechnung zu starten"
+     */
+    private boolean askMathCaptcha(String purpose) {
+        final int MAX = 3;
+        int remaining = MAX;
+
+        while (remaining > 0) {
+            // Neue Aufgabe für jeden Versuch generieren
+            int a = rng.nextInt(12) + 2;
+            int b = rng.nextInt(12) + 2;
+            int opIdx = rng.nextInt(3);
+            String op;
+            int correct;
+
+            if (opIdx == 0) {
+                op = "+";  correct = a + b;
+            } else if (opIdx == 1) {
+                if (a < b) { int t = a; a = b; b = t; }
+                op = "-";  correct = a - b;
+            } else {
+                a = rng.nextInt(9) + 2;
+                b = rng.nextInt(9) + 2;
+                op = "\u00d7";  correct = a * b;
+            }
+
+            int attemptNum = MAX - remaining + 1;
+            String input = JOptionPane.showInputDialog(this,
+                  "\uD83D\uDD10  Anti-Roboter-Verifikation  (" + attemptNum + " / " + MAX + ")\n\n"
+                + "Um " + purpose + ", löse bitte diese Aufgabe:\n\n"
+                + "          " + a + "  " + op + "  " + b + "  =  ?\n\n"
+                + "Gib deine Antwort als ganze Zahl ein:",
+                  "\uD83E\uDDEE Rechenaufgabe – Menschlichkeitsprüfung",
+                  JOptionPane.QUESTION_MESSAGE);
+
+            if (input == null) {
+                popup("\uD83D\uDEAB Aufgabe abgebrochen",
+                      "Du hast die Rechenaufgabe nicht gelöst.\nVorgang wird abgebrochen.",
+                      JOptionPane.WARNING_MESSAGE);
+                return false;
+            }
+
+            int ans;
+            try {
+                ans = Integer.parseInt(input.trim());
+            } catch (NumberFormatException ex) {
+                remaining--;
+                popup("\u274C Keine ganze Zahl!",
+                      "\"" + input + "\" ist keine ganze Zahl!\n"
+                    + "Noch " + remaining + " Versuch(e) übrig.",
+                      JOptionPane.ERROR_MESSAGE);
+                continue;
+            }
+
+            if (ans == correct) {
+                popup("\u2705 Richtig!",
+                      "Korrekte Antwort! Du bist (höchstwahrscheinlich) kein Roboter. \uD83C\uDF89",
+                      JOptionPane.INFORMATION_MESSAGE);
+                return true;
+            }
+
+            remaining--;
+            if (remaining > 0) {
+                popup("\u274C Falsch!",
+                      "Leider falsch. Richtige Antwort war:  " + correct + "\n\n"
+                    + "Noch " + remaining + " Versuch(e) übrig.\n"
+                    + "Tipp: Mit Finger zählen geht's leichter! \uD83D\uDC4B",
+                      JOptionPane.ERROR_MESSAGE);
+            } else {
+                popup("\uD83E\uDD16 Roboter erkannt!",
+                      "Alle " + MAX + " Versuche aufgebraucht!\nRichtige Antwort: " + correct + "\n\n"
+                    + "Das Programm geht davon aus, dass du ein Roboter bist.\n"
+                    + "Vorgang wird abgebrochen! \uD83D\uDE08",
+                      JOptionPane.ERROR_MESSAGE);
+            }
+        }
+        return false;
+    }
+
     // ── Fenster schließen ─────────────────────────────────────────────────────
     private void handleClose() {
         int step1 = JOptionPane.showConfirmDialog(this,
@@ -590,6 +796,23 @@ public class BMIRechner extends JFrame {
               JOptionPane.YES_NO_OPTION,
               JOptionPane.WARNING_MESSAGE);
         if (step2 != JOptionPane.YES_OPTION) return;
+
+        // Captcha: Menschlichkeitsprüfung vor dem Schließen
+        if (!askMathCaptcha("das Programm zu beenden")) {
+            popup("😄 Gut so!",
+                  "Du hast die Aufgabe nicht gelöst.\nDas Programm bleibt geöffnet. 🎉",
+                  JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        // Unnötiger Ladebalken: Programm beenden
+        showFakeLoader("👋 Programm wird beendet...", new String[]{
+            "Sitzungsdaten werden gelöscht...",
+            "Verbindung zu BMI-Servern wird getrennt...",
+            "Temporäre Dateien werden entfernt...",
+            "Abschlussbericht wird erstellt...",
+            "Auf Wiedersehen \uD83D\uDC4B"
+        });
 
         popup("😢 Auf Wiedersehen!",
               "Schade, dass du gehst.\n\nKomm bald wieder! 👋\n\n"
