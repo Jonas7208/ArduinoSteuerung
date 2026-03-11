@@ -1,0 +1,7 @@
+# Java compiled classes
+*.class
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
